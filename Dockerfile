@@ -38,8 +38,8 @@ RUN	tee /etc/conf.d/udevd.conf <<<$'[program:udevd]\nstdout_logfile=/tmp/udevd.l
 	adduser -h /dev/shm -s /bin/bash -D -H -u 1000 "${SESSION_USER}"; \
 	tee -a /etc/sudoers <<<"${SESSION_USER} ALL=(ALL) NOPASSWD:ALL"
 
-WORKDIR	/dev/shm
-ENV	DISPLAY=:0 \
+ENV	HOME=/dev/shm \
+	DISPLAY=:0 \
 	LANG=en_US.UTF-8 \
 	LANGUAGE=en_US.UTF-8 \
 	LC_ALL=C.UTF-8 \
