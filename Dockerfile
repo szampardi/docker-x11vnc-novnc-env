@@ -34,29 +34,32 @@ RUN	if command -v apt; then \
 	fi
 SHELL	["/bin/bash", "-evxo", "pipefail", "-c"]
 ARG	SESSION_USER=webuser
-ARG	SUDO_USER=0
-WORKDIR	/etc/conf.d
+ARG	SESSION_USER_HOME=/dev/shm
+ARG	SESSION_USER_SUDO=0
+ARG	SERVICES_DIR=/etc/conf.d
+WORKDIR	${SERVICES_DIR}
 RUN	if command -v apt; then \
-		tee /etc/conf.d/udevd.conf <<<$'[program:udevd]\nstdout_logfile=/tmp/udevd.log\nredirect_stderr=true\ncommand=/lib/systemd/systemd-udevd\nautorestart=true\n'; \
-		tee /etc/conf.d/websockify.conf <<<$'[program:websockify]\ndirectory=/usr/share/novnc\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/websockify.log\nredirect_stderr=true\ncommand=/usr/bin/websockify %(ENV_WEBSOCKIFY_TLS)s --web /usr/share/novnc "%(ENV_WEB_PORT)s" "%(ENV_VNC_ADDR)s":"%(ENV_VNC_PORT)s"\nautorestart=true\n'; \
-		useradd --home /dev/shm --no-create-home --shell /bin/bash --uid 1000 "${SESSION_USER}"; \
+		tee udevd.conf <<<$'[program:udevd]\nstdout_logfile=/tmp/udevd.log\nredirect_stderr=true\ncommand=/lib/systemd/systemd-udevd\nautorestart=true\n'; \
+		tee websockify.conf <<<$'[program:websockify]\ndirectory=/usr/share/novnc\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/websockify.log\nredirect_stderr=true\ncommand=/usr/bin/websockify %(ENV_WEBSOCKIFY_TLS)s --web /usr/share/novnc "%(ENV_WEB_PORT)s" "%(ENV_VNC_ADDR)s":"%(ENV_VNC_PORT)s"\nautorestart=true\n'; \
+		useradd --home "${SESSION_USER_HOME}" --no-create-home --shell /bin/bash --uid 1000 "${SESSION_USER}"; \
 	elif command -v apk; then \
-		tee /etc/conf.d/udevd.conf <<<$'[program:udevd]\nstdout_logfile=/tmp/udevd.log\nredirect_stderr=true\ncommand=/sbin/udevd\nautorestart=true\n'; \
-		tee /etc/conf.d/websockify.conf <<<$'[program:websockify]\ndirectory=/opt/noVNC\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/websockify.log\nredirect_stderr=true\ncommand=/opt/noVNC/utils/websockify/run %(ENV_WEBSOCKIFY_TLS)s --web /opt/noVNC "%(ENV_WEB_PORT)s" "%(ENV_VNC_ADDR)s":"%(ENV_VNC_PORT)s"\nautorestart=true\n'; \
-		adduser -h /dev/shm -s /bin/bash -D -H -u 1000 "${SESSION_USER}"; \
+		tee udevd.conf <<<$'[program:udevd]\nstdout_logfile=/tmp/udevd.log\nredirect_stderr=true\ncommand=/sbin/udevd\nautorestart=true\n'; \
+		tee websockify.conf <<<$'[program:websockify]\ndirectory=/opt/noVNC\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/websockify.log\nredirect_stderr=true\ncommand=/opt/noVNC/utils/websockify/run %(ENV_WEBSOCKIFY_TLS)s --web /opt/noVNC "%(ENV_WEB_PORT)s" "%(ENV_VNC_ADDR)s":"%(ENV_VNC_PORT)s"\nautorestart=true\n'; \
+		adduser -h "${SESSION_USER_HOME}" -s /bin/bash -D -H -u 1000 "${SESSION_USER}"; \
 	fi; \
-	tee /etc/conf.d/dbus-daemon.conf <<<$'[program:dbus-daemon]\nstdout_logfile=/tmp/dbus-daemon.log\nredirect_stderr=true\ncommand=/usr/bin/dbus-daemon --system --nofork\nautorestart=true\n'; \
-	tee /etc/conf.d/x-prog.conf <<<$'[program:x-prog]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/x-prog.log\nredirect_stderr=true\ncommand=%(ENV_X_PROG)s\nautorestart=true\n'; \
-	tee /etc/conf.d/x11vnc.conf <<<$'[program:x11vnc]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/x11vnc.log\nredirect_stderr=true\ncommand=/usr/bin/x11vnc -xkb -forever -shared %(ENV_VNCPASSWD)s\nautorestart=true\n'; \
-	tee /etc/conf.d/xvfb.conf <<<$'[program:xvfb]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/xvfb.log\nredirect_stderr=true\ncommand=/usr/bin/Xvfb "%(ENV_DISPLAY)s" -screen 0 "%(ENV_VSCREEN_RES)s" -listen tcp -ac\nautorestart=true\n'; \
-	tee /etc/supervisord.conf <<<$'[supervisord]\nnodaemon=true\n[include]\nfiles = /etc/conf.d/*.conf\n'; \
-	chown -v nobody:nogroup /etc/conf.d/*.conf /etc/supervisord.conf; \
-	chmod -v 444 /etc/conf.d/*.conf /etc/supervisord.conf; \
+	tee dbus-daemon.conf <<<$'[program:dbus-daemon]\nstdout_logfile=/tmp/dbus-daemon.log\nredirect_stderr=true\ncommand=/usr/bin/dbus-daemon --system --nofork\nautorestart=true\n'; \
+	tee x-prog.conf <<<$'[program:x-prog]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/x-prog.log\nredirect_stderr=true\ncommand=%(ENV_X_PROG)s\nautorestart=true\n'; \
+	tee x11vnc.conf <<<$'[program:x11vnc]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/x11vnc.log\nredirect_stderr=true\ncommand=/usr/bin/x11vnc -xkb -forever -shared %(ENV_VNCPASSWD)s\nautorestart=true\n'; \
+	tee xvfb.conf <<<$'[program:xvfb]\nuser=%(ENV_SESSION_USER)s\nstdout_logfile=/tmp/xvfb.log\nredirect_stderr=true\ncommand=/usr/bin/Xvfb "%(ENV_DISPLAY)s" -screen 0 "%(ENV_VSCREEN_RES)s" -listen tcp -ac\nautorestart=true\n'; \
+	tee /etc/supervisord.conf <<<$'[supervisord]\nnodaemon=true\n[include]\nfiles = %s/*.conf\n' $(pwd); \
+	chown -v nobody:nogroup $(pwd)/*.conf /etc/supervisord.conf; \
+	chmod -v 444 $(pwd)/*.conf /etc/supervisord.conf; \
 	tee /bin/entrypoint.sh <<<$'#!/bin/bash -xe\nmkdir -vp /var/run/dbus\nif [[ -s ${TLS_CERT} ]] && [[ -s ${TLS_KEY} ]]; then export WEBSOCKIFY_TLS="--cert ${TLS_CERT} --key ${TLS_KEY} --ssl-only"; fi\nif [[ -n ${VNCPASSWD} ]]; then export VNCPASSWD="-passwd ${VNCPASSWD}"; fi\n{\n\tuntil [[ -n $(pidof Xvfb) ]]; do sleep 3; done\n\t/usr/bin/xset -dpms || true\n\t/usr/bin/xset s noblank\n\t/usr/bin/xset s off\n} &\n/usr/bin/supervisord -c /etc/supervisord.conf\n'; \
 	chmod -v 555 /bin/entrypoint.sh; \
-	if [[ ${SUDO_USER} != 0 ]]; then tee -a /etc/sudoers <<<"${SESSION_USER} ALL=(ALL) NOPASSWD:ALL"; fi
+	if [[ ${SESSION_USER_SUDO} != 0 ]]; then tee -a /etc/sudoers <<<"${SESSION_USER} ALL=(ALL) NOPASSWD:ALL"; fi
 
-ENV	HOME=/dev/shm \
+ENV	SESSION_USER=${SESSION_USER} \
+	HOME=${SESSION_USER_HOME} \
 	DISPLAY=:0 \
 	LANG=en_US.UTF-8 \
 	LANGUAGE=en_US.UTF-8 \
@@ -69,8 +72,7 @@ ENV	HOME=/dev/shm \
 	TLS_CERT= \
 	TLS_KEY= \
 	WEBSOCKIFY_TLS= \
-	X_PROG=/usr/bin/xfce4-session \
-	SESSION_USER=${SESSION_USER}
-WORKDIR	${HOME}
+	X_PROG=/usr/bin/xfce4-session
+WORKDIR	${SESSION_USER_HOME}
 EXPOSE	5900/tcp 6080/tcp
 ENTRYPOINT	["/bin/entrypoint.sh"]
